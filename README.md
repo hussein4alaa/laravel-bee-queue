@@ -13,7 +13,10 @@ Jobs pushed from **JS bee-queue** can be consumed by the PHP worker and vice ver
 ```bash
 composer require g4t/laravel-bee-queue
 php artisan vendor:publish --tag=bee-queue-config
+php artisan vendor:publish --tag=bee-queue-assets
 ```
+
+> **`bee-queue-assets`** copies the dashboard logo into `public/vendor/bee-queue/`. Run this once after install.
 
 ---
 
@@ -34,6 +37,12 @@ Publish the config file and set your `.env` keys:
 | `BEE_QUEUE_RETRY_DELAY` | `5` | Retry delay in seconds |
 | `BEE_QUEUE_REMOVE_ON_SUCCESS` | `false` | Delete job data after success |
 | `BEE_QUEUE_REMOVE_ON_FAILURE` | `false` | Delete job data after failure |
+| `BEE_QUEUE_DASHBOARD_PATH` | `bee-queue` | URL path for the dashboard |
+
+### Retry backoff strategies
+
+- **`fixed`** — waits the same `BEE_QUEUE_RETRY_DELAY` seconds between every attempt.
+- **`exponential`** — doubles the delay on each attempt: `delay × 2^(attempt - 1)`. Useful when downstream services need time to recover.
 
 ---
 
@@ -157,6 +166,49 @@ php artisan bee-queue:work --once
 # Show queue health stats
 php artisan bee-queue:stats
 php artisan bee-queue:stats emails
+```
+
+---
+
+## Dashboard
+
+The package ships with a built-in web dashboard for monitoring and managing your queues.
+
+### Setup
+
+```bash
+# Publish the dashboard logo asset (required once)
+php artisan vendor:publish --tag=bee-queue-assets
+```
+
+### Accessing the dashboard
+
+Visit `/bee-queue` in your browser (or whatever path you set via `BEE_QUEUE_DASHBOARD_PATH`).
+
+### Features
+
+- **Stats cards** — live counts for waiting, active, succeeded, failed, and delayed jobs. Click any card to filter the job list.
+- **Job table** — shows job ID, status badge, payload data, timestamp, and progress bar.
+- **Retry** — re-queues a failed job back to the waiting list with a fresh timestamp.
+- **Delete** — removes a job from all Redis keys permanently.
+- **Auto-refresh** — page reloads every 5 seconds with a countdown timer.
+- **Queue switcher** — switch between named queues from the header input.
+
+### Middleware & path
+
+Configure the dashboard in `config/bee-queue.php`:
+
+```php
+'dashboard' => [
+    'path'       => env('BEE_QUEUE_DASHBOARD_PATH', 'bee-queue'),
+    'middleware' => ['web'],  // add 'auth' or your own middleware here
+],
+```
+
+To protect the dashboard behind authentication:
+
+```php
+'middleware' => ['web', 'auth'],
 ```
 
 ---

@@ -46,4 +46,14 @@ return [
         'backoff'       => env('BEE_QUEUE_RETRY_BACKOFF', 'fixed'), // fixed | exponential
         'delay'         => env('BEE_QUEUE_RETRY_DELAY', 5),         // seconds
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboard Settings
+    |--------------------------------------------------------------------------
+    */
+    'dashboard' => [
+        'path'       => env('BEE_QUEUE_DASHBOARD_PATH', 'bee-queue'),
+        'middleware' => ['web'],
+    ],
 ];
