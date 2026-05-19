@@ -18,9 +18,10 @@ class WorkCommand extends Command
 
     public function handle(QueueManager $manager): int
     {
-        $queueName  = $this->argument('queue');
+        $queueName    = $this->argument('queue');
         $handlerClass = $this->option('handler');
-        $once       = $this->option('once');
+        $once         = $this->option('once');
+        $label        = $queueName ?: 'default';
 
         if ($handlerClass && ! class_exists($handlerClass)) {
             $this->error("Handler class [{$handlerClass}] not found.");
@@ -33,7 +34,7 @@ class WorkCommand extends Command
 
         $worker = $manager->worker($queueName);
 
-        $this->info('Starting bee-queue worker on [' . ($queueName ?? 'default') . ']...');
+        $this->info("Starting bee-queue worker on [{$label}]...");
 
         if ($once) {
             $processed = $worker->processOne($handler);
