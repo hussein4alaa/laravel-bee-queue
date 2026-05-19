@@ -5,7 +5,7 @@ A simple, fast, Redis-backed job queue for Laravel — inspired by [bee-queue](h
 ## Installation
 
 ```bash
-composer require hussein/laravel-bee-queue
+composer require g4t/laravel-bee-queue
 php artisan vendor:publish --tag=bee-queue-config
 ```
 
