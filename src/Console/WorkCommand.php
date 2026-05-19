@@ -33,7 +33,7 @@ class WorkCommand extends Command
 
         $worker = $manager->worker($queueName);
 
-        $this->info("Starting bee-queue worker on [{$queueName ?? 'default'}]...");
+        $this->info('Starting bee-queue worker on [' . ($queueName ?? 'default') . ']...');
 
         if ($once) {
             $processed = $worker->processOne($handler);
