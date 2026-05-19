@@ -29,7 +29,7 @@ class WorkCommand extends Command
         }
 
         $handler = $handlerClass
-            ? fn ($job) => app($handlerClass)->handle($job)
+            ? fn ($job) => app($handlerClass, ['job' => $job])->handle()
             : fn ($job) => $this->defaultHandler($job);
 
         $worker = $manager->worker($queueName);

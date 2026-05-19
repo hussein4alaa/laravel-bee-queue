@@ -6,23 +6,20 @@ use InvalidArgumentException;
 
 class Job
 {
-    public readonly string $id;
-    public string $status = 'created'; // created|waiting|active|succeeded|failed
+    public ?string $id = null;
+    public string $status = 'created';
+    public int $progress = 0;
     public int $attempts = 0;
-    public ?int $delay = null;     // seconds from now
-    public ?int $timeout = null;   // seconds
+    public ?int $delay = null;
+    public ?int $timeout = null;
     public int $retries = 0;
     public string $backoff = 'fixed';
     public int $retryDelay = 5;
-    public mixed $result = null;
 
     public function __construct(
         public readonly Queue $queue,
         public readonly array $data,
-        ?string $id = null,
-    ) {
-        $this->id = $id ?? $this->generateId();
-    }
+    ) {}
 
     // ── Chainable setters ──────────────────────────────────────────────────
 
@@ -67,50 +64,50 @@ class Job
         return $this;
     }
 
-    // ── Progress (reported from inside a handler) ─────────────────────────
+    // ── Progress ──────────────────────────────────────────────────────────
 
     public function reportProgress(int $progress): void
     {
+        $this->progress = $progress;
         $this->queue->publishProgress($this, $progress);
     }
 
-    // ── Serialization ─────────────────────────────────────────────────────
+    // ── Serialization (matches bee-queue JS format) ───────────────────────
 
-    public function toArray(): array
+    public function toRedisJson(): string
     {
-        return [
-            'id'         => $this->id,
-            'data'       => json_encode($this->data),
-            'attempts'   => $this->attempts,
-            'delay'      => $this->delay,
-            'timeout'    => $this->timeout,
-            'retries'    => $this->retries,
-            'backoff'    => $this->backoff,
-            'retryDelay' => $this->retryDelay,
-            'status'     => $this->status,
-        ];
+        return json_encode([
+            'data'    => $this->data,
+            'options' => [
+                'timestamp'   => (int) round(microtime(true) * 1000),
+                'stacktraces' => [],
+                'retries'     => $this->retries,
+                'backoff'     => $this->backoff,
+                'retryDelay'  => $this->retryDelay,
+                'timeout'     => $this->timeout,
+                'delay'       => $this->delay,
+            ],
+            'status'   => $this->status,
+            'progress' => $this->progress,
+        ]);
     }
 
-    public static function fromArray(Queue $queue, array $raw): static
+    public static function fromRedisJson(Queue $queue, string $id, string $json): static
     {
-        $job = new static(
-            queue: $queue,
-            data: json_decode($raw['data'] ?? '[]', true),
-            id: $raw['id'],
-        );
-        $job->attempts   = (int) ($raw['attempts'] ?? 0);
-        $job->delay      = isset($raw['delay']) ? (int) $raw['delay'] : null;
-        $job->timeout    = isset($raw['timeout']) ? (int) $raw['timeout'] : null;
-        $job->retries    = (int) ($raw['retries'] ?? 0);
-        $job->backoff    = $raw['backoff'] ?? 'fixed';
-        $job->retryDelay = (int) ($raw['retryDelay'] ?? 5);
-        $job->status     = $raw['status'] ?? 'waiting';
+        $raw = json_decode($json, true);
+
+        $job           = new static($queue, $raw['data'] ?? []);
+        $job->id       = $id;
+        $job->status   = $raw['status'] ?? 'created';
+        $job->progress = (int) ($raw['progress'] ?? 0);
+
+        $opts             = $raw['options'] ?? [];
+        $job->retries     = (int) ($opts['retries'] ?? 0);
+        $job->backoff     = $opts['backoff'] ?? 'fixed';
+        $job->retryDelay  = (int) ($opts['retryDelay'] ?? 5);
+        $job->timeout     = isset($opts['timeout']) ? (int) $opts['timeout'] : null;
+        $job->delay       = isset($opts['delay']) ? (int) $opts['delay'] : null;
 
         return $job;
-    }
-
-    private function generateId(): string
-    {
-        return bin2hex(random_bytes(8));
     }
 }
